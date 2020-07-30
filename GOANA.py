@@ -1,5 +1,6 @@
 import sys
 import numpy
+import pandas as pd
 import pysam
 import multiprocessing as mp
 from collections import defaultdict
@@ -16,7 +17,7 @@ def inputs_to_dict(input_queue, output_queue):
         start = int(regions[1])
         end = int(regions[2])
         samfile = pysam.AlignmentFile(myFileHandle, "rb")
-        for read in samfile.fetch(chr, start-1, end-1, multiple_iterators=True):
+        for read in samfile.fetch(chr, start, end, multiple_iterators=True):            
             oldCigar = read.cigartuples
             if oldCigar == None:
                 continue
@@ -60,43 +61,36 @@ def filter_reads(myDictionary, start, end):
         sequence = thisRead
         pos = int(pos)
         read_length = len(sequence)
-        if pos <= start:
-            new_start = start - pos + 1
-            if pos + read_length <= end:
-                lengthToAdd = length - (read_length - new_start)
-                if lengthToAdd/float(length) > (1-args_minCoverage):
-                    continue 
-                toAdd = [" "] * lengthToAdd
-                toAppend = sequence[new_start:] + toAdd
-            else:
-                if read_length/float(length) < args_minCoverage:
-                    continue
-                toAppend = sequence[new_start:new_start+length]
-        else:
-            if pos + read_length > end:
-                new_end = end - pos + 1
-                lengthToAdd = length - new_end
-                if lengthToAdd/float(length) > (1-args_minCoverage):
-                    continue
-                toAdd = [" "] * lengthToAdd
-                toAppend = toAdd + sequence[:new_end]
-            else:
-                if read_length/float(length) < args_minCoverage:
-                    continue
-                before = [" "] * (pos - start)
-                after = [" "] * (length - read_length - pos + start)
-                toAppend = before + sequence + after
-        tupleToAppend = tuple(toAppend)
+        fin = pos + read_length
+        lengthToAdd = 0
+        new_start = 0
+        new_fin = 0
+        newRead = list()
+        if pos <= start: 
+            new_start = start - pos
+            newRead = sequence[new_start:]
+        if pos > start:
+            lengthToAdd = pos - start
+            newRead = [" "] * lengthToAdd + sequence
+        if fin >= end:
+            newRead = newRead[:length]
+        if fin < end:
+            lengthToAdd = end - fin
+            newRead = newRead + [" "] * lengthToAdd
+        totalCover = newRead.count(" ")
+        if totalCover/float(length) > (1 - args_minCoverage):
+            continue
+        tupleToAppend = tuple(newRead)
         if tupleToAppend not in newDictionary:
             newDictionary[tupleToAppend] = myDictionary[a]
         else:
             newDictionary[tupleToAppend] += myDictionary[a]
-        newList.append(toAppend)
+        newList.append(newRead)
     return newDictionary, newList
 
 def print_data(print_queue, final_queue):
     while True:
-        toPrint = []
+        toPrintSummary = []
         region, myDict = print_queue.get()
         if region == "EMPTY":
             final_queue.put("DONE")
@@ -105,7 +99,7 @@ def print_data(print_queue, final_queue):
         start = int(region[1]) - args_upstream
         end = int(region[2]) + args_downstream
         length = end - start
-        toPrint.append('{} {} {} {} {} {}'.format("Chromosome:", chr, "- Region:", start, "-", end))
+        toPrintSummary.append('{} {} {} {} {} {}'.format("Chromosome:", chr, "- Region:", start, "-", end))
 
         #convert alignment file to dictionary 
         controlDict = myDict[args_control]
@@ -113,14 +107,14 @@ def print_data(print_queue, final_queue):
 
         filteredControlDict, filteredControlList = filter_reads(controlDict, start, end)
         filteredTreatedDict, filteredTreatedList = filter_reads(treatedDict, start, end)
-
+        
         sampleDictList = [filteredControlDict, filteredTreatedDict]
 
         #get consensus sequence
         consensus = ""
         numpyData = numpy.array(filteredControlList)
         for column in numpyData.T:
-            l = [x for x in column if x != " "]
+            l = [x for x in column if x != " " and x != "-" and len(x) == 1]
             if not l:
                 consensus += "N"
             else:
@@ -131,67 +125,99 @@ def print_data(print_queue, final_queue):
         if not consensus:
             consensus = "N" * length
 
-        toPrint.append('{} {}'.format("Consensus:", consensus))
+        toPrintSummary.append('{} {}'.format("Consensus:", consensus))
 
         consensus = list(consensus)
-        controlDict = defaultdict(int)
-        mutDict = defaultdict(int)
+        controlDict = {}
+        mutDict = {}
+        mutation_keys = set()
 
         total_sum_abs = 0
+        isDeletion = False
+        totalReadsList = []
 
+        mutToRead = {}
         for count, d in enumerate(sampleDictList):
             mutationsDict = defaultdict(int)
-            toPrint.append("")
-            if count == 0:
-                toPrint.append('{}'.format("Control"))
-            else:
-                toPrint.append('{}'.format("Treated"))
             for sample in d:
                 newMutation = []
+                isDeletion = False
+                myRead = list(sample)
                 for i in range(len(sample)):
-                    if sample[i] != consensus[i] and sample[i] != " ":
-                        if newMutation and newMutation[-1][0] == "-" and sample[i] == "-":
+                    if sample[i] == ' ':
+                        myRead[i] = consensus[i]
+                    if sample[i] != consensus[i] and sample[i] != " ": #if mutation
+                        if newMutation and newMutation[-1][0] == "-" and sample[i] == "-" and isDeletion: #if continuing a deletion
                             previous = newMutation[-1][1]
                             startIndex = str(previous.split(":")[0])
                             toAdd = startIndex + ":" + str(i)
                             newMutation[-1] = tuple(["-", toAdd])
+                            isDeletion = True
                         else:
                             newMutation.append(tuple([sample[i], str(i)]))
+                            if sample[i] == "-":
+                                isDeletion = True
+                            else:
+                                isDeletion = False
+                    else:
+                        isDeletion = False
                 newMutationTuple = tuple(newMutation)
                 if newMutationTuple in mutationsDict:
                     mutationsDict[newMutationTuple] += d[sample]
                 else:
                     mutationsDict[newMutationTuple] = d[sample]
-                
+                if newMutationTuple not in mutToRead:
+                    mutToRead[newMutationTuple] = ''.join(myRead)
             total_reads = float(sum(mutationsDict.values()))
+            totalReadsList.append(total_reads)
             if total_reads == 0:
-                toPrint.append("No valid reads for this region")
                 continue
             running_total = 0
-            toPrint.append('{:>8} {:>10} {} {}'.format("# Reads", "% Cov", "  ", "Mutations from Consensus"))
             for a in sorted(mutationsDict.items(), key=lambda x: x[1], reverse = True):
-                percentage_coverage = round(100*a[1]/total_reads, 3)
+                percentage_coverage = 100*a[1]/total_reads
+                if a[0] not in controlDict:
+                    controlDict[a[0]] = {}
+                    controlDict[a[0]]['perc'] = 0
+                    controlDict[a[0]]['count'] = 0
                 if count == 0:
-                    controlDict[a[0]] = percentage_coverage
-                else:
-                    mutDict[a[0]] = percentage_coverage
-                if percentage_coverage >= args_minFreq:
-                    listToPrint = [''.join(b) for b in a[0]]
-                    toPrint.append('{:8} {:10} {} {}'.format(a[1], percentage_coverage, "  ", ','.join(listToPrint)))
-                    running_total += a[1]
-            leftover = int(total_reads - running_total)
-            toPrint.append('{:8} {:10} {} {}{}{}'.format(leftover, round(100*leftover/total_reads, 3), "  ", "All other mutations which appear <", args_minFreq, "% of the time"))
+                    controlDict[a[0]]['perc'] = percentage_coverage
+                    controlDict[a[0]]['count'] = a[1]
+                if a[0] not in mutDict:
+                    mutDict[a[0]] = {}
+                    mutDict[a[0]]['perc'] = 0
+                    mutDict[a[0]]['count'] = 0
+                if count == 1:
+                    mutDict[a[0]]['perc'] = percentage_coverage
+                    mutDict[a[0]]['count'] = a[1]
             if count == 1:
-                mutation_keys = set(mutationsDict.keys())
+                mutation_keys = set(mutDict.keys())
                 mutation_keys.update(controlDict.keys())
                 for a in mutation_keys:
-                    total_sum_abs += abs(mutDict[a] - controlDict[a])
-        toPrint.insert(2, '{} {}'.format("Mutation Rate:", str(round(total_sum_abs/2, 3)) + "%"))
-        toPrint.append("")
-        separator = "-" * 50
-        toPrint.append(separator)
-        toPrint.append("")
-        final_queue.put(toPrint)
+                    total_sum_abs += abs(mutDict[a]['perc'] - controlDict[a]['perc'])
+        toPrintSummary.append('{} {}'.format("Mutation Rate:", str(round(total_sum_abs/2, 3)) + "%"))
+        toPrintSummary.append('{} {}'.format("Total Control Reads:", int(totalReadsList[0])))
+        toPrintSummary.append('{} {}'.format("Total Treated Reads:", int(totalReadsList[1])))
+        toPrintSummary.append("")
+        toPrintSummary.append('{:35} {:30} {:>10} {:>10} {:>10} {:>10} {:>30}'.format("Sequence", "Mutation", "C-Cov", "C-#", "T-Cov", "T-#", "Difference"))
+        toPrintData = []
+        dataToPandas = []
+        if mutation_keys:
+            for a in mutation_keys:
+                diff = round(mutDict[a]['perc']-controlDict[a]['perc'], 3)
+                dataToPandas.append([mutToRead[a], ','.join([''.join(b) for b in a]), round(controlDict[a]['perc'], 3), controlDict[a]['count'], round(mutDict[a]['perc'], 3), mutDict[a]['count'], diff])
+            pandasData = pd.DataFrame(dataToPandas, columns=["Sequence", "Mutations", "ContProp", "ContCount", "TreatProp", "TreatCount", "Difference"])
+            pandasData = pandasData.values.tolist()
+            formattedString = '{:35} {:30} {:10} {:10} {:10} {:10} {:30}'
+            for a in pandasData:
+                toPrintSummary.append(formattedString.format(*a))
+        else:
+            toPrintSummary.append("No mutations")
+        toPrintSummary.append("")
+        separator = "-" * 50    
+        toPrintSummary.append(separator)
+        toPrintSummary.append("")
+        final_queue.put(toPrintSummary)
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('regions', help="List of regions (bed)")
@@ -222,7 +248,7 @@ with open(args_regions) as f:
             chrom = chrom[3:]
         regions.append(tuple([chrom, start, stop]))
 
-print("Parsing Input Data")
+print("Parsing Input")
 
 input_queue = mp.Queue()
 output_queue = mp.Queue()
@@ -245,7 +271,7 @@ for region in regions:
 for x in range(num_threads):
     input_queue.put(("EMPTY", "EMPTY"))
 
-print("Analysing data")
+print("Analysing Data")
 while num_done < num_threads:
     output = output_queue.get()
     if output == "DONE":
@@ -268,21 +294,22 @@ for x in range(num_threads):
 
 num_done = 0
 
-if args_out:
-    f = open(args_out, 'w')
+dataToPrint = {}
 while num_done < num_threads:
     output = final_queue.get()
     if output == "DONE":
         num_done += 1
     else:
-        if args_out:
-            f.write('\n'.join(output))
-            f.write('\n')
-        else:
-            print('\n'.join(output))
+        dataToPrint[output[0]] = '\n'.join(output)
 
 if args_out:
+    f = open(args_out, 'w')
+    for key, value in sorted(dataToPrint.items(), key=lambda x: x[0]): 
+        f.write(value)
     f.close()
+else:
+    for key, value in sorted(dataToPrint.items(), key=lambda x: x[0]): 
+        print(value)
 
 for p in print_processes:
     p.join()
