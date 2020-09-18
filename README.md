@@ -1,8 +1,17 @@
 ### GOANA
+
+GOANA is a tool for assessing mutation rates at target sites across the genome from next generation sequencing data.
+ 
+As input it takes alignment files (in bam format) for a control and treated sample as well as information about the position of the target sites provided in bed format (chr, start, stop as a minimum). The target sites are compared across the two samples and the mutation rate calculated. Users can specify thresholds and filters to reduce the impact of low-frequency mutations or SNPs.
+ 
+GOANA will generate a single report (.txt format) for all target sites.
+ 
+A web-app implementation is also available from gt-scan.csiro.au/goana.
+
 ---
 **Usage**  
 ```
-GOANA.py [-h] [-up [UP]] [-down [DOWN]] [-mc [MC]] [-mr [MR]] [-o [O]] regions.bed control.bam treated.bam
+GOANA.py [-h] [-s] [-q [Q]] [-up [UP]] [-down [DOWN]] [-mc [MC]] [-mr [MR]] [-o [O]] regions.bed control.bam treated.bam
 ```
 ---
 
@@ -20,7 +29,7 @@ __optional arguments:__
 &nbsp;&nbsp;&nbsp;&nbsp;__-o [O]:__
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Optional output file   
 &nbsp;&nbsp;&nbsp;&nbsp;__-s:__
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Include this flag to exclude ALL SNPs
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Include this flag to exclude ALL SNPs
 &nbsp;&nbsp;&nbsp;&nbsp;__-q [Q]:__
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Only include bases with a quality (Phred score) equal to or above this threshold (INT)
 
