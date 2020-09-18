@@ -19,6 +19,11 @@ __optional arguments:__
 &nbsp;&nbsp;&nbsp;&nbsp;__-mr [MR]:__  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;   		Minimum relative read frequency to classify as significant mutation (percentage between 0 and 100)  
 &nbsp;&nbsp;&nbsp;&nbsp;__-o [O]:__
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Optional output file   
+&nbsp;&nbsp;&nbsp;&nbsp;__-s:__
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Include this flag to exclude ALL SNPs
+&nbsp;&nbsp;&nbsp;&nbsp;__-q [Q]:__
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Only include bases with a quality (Phred score) equal to or above this threshold (INT)
+
   
 __Requires:__  
 &nbsp;&nbsp;&nbsp;&nbsp;Samtools + Pysam  
