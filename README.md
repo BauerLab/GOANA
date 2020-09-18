@@ -6,7 +6,7 @@ As input it takes alignment files (in bam format) for a control and treated samp
  
 GOANA will generate a single report (.txt format) for all target sites.
  
-A web-app implementation is also available from gt-scan.csiro.au/goana.
+A web-app implementation is also available from [gt-scan.csiro.au/goana](gt-scan.csiro.au/goana).
 
 ---
 **Usage**  
@@ -29,8 +29,7 @@ __optional arguments:__
 &nbsp;&nbsp;&nbsp;&nbsp;__-o [O]:__
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Optional output file   
 &nbsp;&nbsp;&nbsp;&nbsp;__-s:__
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Include this flag to exclude ALL SNPs
-
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Include this flag to exclude ALL SNPs  
 &nbsp;&nbsp;&nbsp;&nbsp;__-q [Q]:__
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Only include bases with a quality (Phred score) equal to or above this threshold (INT)
 
