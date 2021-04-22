@@ -6,7 +6,7 @@ As input it takes alignment files (in bam format) for a control and treated samp
  
 GOANA will generate a single report (.txt format) for all target sites.
  
-A web-app implementation is also available from [gt-scan.csiro.au/goana](gt-scan.csiro.au/goana).
+A web-app implementation is also available from [https://gt-scan.csiro.au/goana](https://gt-scan.csiro.au/goana).
 
 ---
 **Usage**  
